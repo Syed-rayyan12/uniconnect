@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from "react";
-import { ArrowLeft, Search, Grid, List, Heart, Share, Star, MapPin, Clock, Eye } from "lucide-react";
+import { ArrowLeft, Search, Grid, List, Heart, Share, Star, MapPin, Clock, Eye, Briefcase, Car, DollarSign, Home, ShoppingBag, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,8 @@ export default function MarketplacePage() {
   // Use PostsContext for marketplace posts
   const { posts: marketplacePosts, loading, error } = usePostsByCategory('buy-sell');
   const { updatePost } = usePosts();
-  
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -47,11 +48,21 @@ export default function MarketplacePage() {
     }));
   }, [marketplacePosts]);
 
+
+  const handleCategoryChange = (categoryId: string) => {
+    // Only make changes if category is actually different
+    if (selectedCategory === categoryId) return
+
+    setSelectedCategory(categoryId)
+    setSelectedCity('all') // Reset city filter when changing category
+  }
+
   const handleLocationFilterChange = useCallback((data: any) => {
     // Only update radius if it has changed
     if (data.radius !== locationData.radius) {
       updateRadius(data.radius);
     }
+    
     
     // In a real app, you would filter products based on location here
     if (data?.location) {
@@ -72,6 +83,16 @@ export default function MarketplacePage() {
     
     return matchesSearch && matchesLocation && matchesCategory && matchesCondition;
   });
+
+
+  const TabsCategories = [
+    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
+    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
+    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
+    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
+    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
+    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
+  ]
 
   const categories = [
     { value: '', label: 'All Categories' },
@@ -114,7 +135,7 @@ export default function MarketplacePage() {
     <div className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex max-sm:flex-col max-sm:items-start items-center justify-between mb-8">
           <div className="flex items-center">
             <Link href="/" className="mr-4">
               <ArrowLeft className="h-6 w-6 text-gray-600 hover:text-orange-600" />
@@ -124,7 +145,7 @@ export default function MarketplacePage() {
               <p className="text-gray-600">Buy and sell items in your university community</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex max-sm:flex-row-reverse items-center gap-4 max-sm:mt-6">
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('grid')}
@@ -142,6 +163,30 @@ export default function MarketplacePage() {
             <Button className="bg-orange-500 hover:bg-orange-600">
               Sell Item
             </Button>
+          </div>
+        </div>
+     
+        {/* Ordered Tabs */}
+        <div className=" pb-6">
+          <div className="flex flex-wrap gap-3 ">
+            {TabsCategories.map((category) => {
+              const IconComponent = category.icon
+              const isActive = selectedCategory === category.id
+
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${isActive
+                      ? 'bg-orange-500 text-white shadow-lg scale-105'
+                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                >
+                  <IconComponent className="h-5 w-5" />
+                  <span className="text-sm font-medium">{category.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

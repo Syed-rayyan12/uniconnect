@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Clock, Briefcase, Building, Users, BookOpen, Search, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Briefcase, Building, Users, BookOpen, Search, MessageCircle, Car, DollarSign, Home, ShoppingBag, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -78,17 +78,34 @@ export default function JobsPage() {
   const locationData = useLocationData();
   const { updateRadius } = useLocation();
   const router = useRouter();
-  
+
   // Use PostsContext for jobs posts
   const { posts: jobsPosts, loading, error } = usePostsByCategory('jobs');
   const { updatePost } = usePosts();
-  
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showMessagingModal, setShowMessagingModal] = useState(false);
   const [locationInfo, setLocationInfo] = useState<any>(null);
+
+  const categories = [
+    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
+    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
+    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
+    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
+    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
+    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
+  ]
+
+  const handleCategoryChange = (categoryId: string) => {
+    // Only make changes if category is actually different
+    if (selectedCategory === categoryId) return
+    setSelectedCategory(categoryId)
+    setSelectedCity('all') // Reset city filter when changing category
+  }
 
   // Transform posts into jobs format
   const jobs = useMemo(() => {
@@ -118,7 +135,7 @@ export default function JobsPage() {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -134,16 +151,16 @@ export default function JobsPage() {
   }, [locationData.radius, updateRadius]);
 
   const filteredJobs = jobs.filter((job: Job) => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (job.details?.job?.company && job.details.job.company.toLowerCase().includes(searchQuery.toLowerCase())) ||
       job.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLocation = !locationFilter || 
+
+    const matchesLocation = !locationFilter ||
       (job.location && job.location.city.toLowerCase().includes(locationFilter.toLowerCase()));
-    
+
     const matchesType = !typeFilter || job.details?.job?.type === typeFilter;
-    
+
     return matchesSearch && matchesLocation && matchesType;
   });
 
@@ -179,29 +196,60 @@ export default function JobsPage() {
     <div className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex max-sm:flex-col max-sm:items-start items-center justify-between mb-8">
           <div className="flex items-center">
             <Link href="/" className="mr-4">
               <ArrowLeft className="h-6 w-6 text-gray-600 hover:text-orange-600" />
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <Briefcase className="h-8 w-8 text-orange-500 mr-3" />
+
+              <h1 className="text-3xl  font-bold text-gray-900 flex items-center">
+                <Briefcase className="h-8 w-8 text-orange-500 mr-3 " />
                 Jobs & Internships
+
               </h1>
-              <p className="text-gray-600">Find student-friendly job opportunities across the UK</p>
+
+              <p className="text-gray-600 max-sm:pr-12">Find student-friendly job opportunities across the UK</p>
+
             </div>
           </div>
-          <Button 
-            className="bg-orange-500 hover:bg-orange-600"
-            onClick={() => router.push('/jobs/post')}
-          >
-            Post a Job
-          </Button>
+          <div className="flex justify-start items-start max-sm:flex-none">
+            <Button
+              className="bg-orange-500 hover:bg-orange-600 max-sm:mt-6"
+              onClick={() => router.push('/jobs/post')}
+            >
+              Post a Job
+            </Button>
+          </div>
+        </div>
+
+        <div className=" pb-6">
+          <div className="flex flex-wrap gap-3 ">
+            {categories.map((category) => {
+              const IconComponent = category.icon
+              const isActive = selectedCategory === category.id
+
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${isActive
+                    ? 'bg-orange-500 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                >
+                  <IconComponent className="h-5 w-5" />
+                  <span className="text-sm font-medium">{category.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Search and Filters */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+
+
           {/* Location Filter */}
           <div className="lg:col-span-1">
             <LocationFilter
@@ -265,7 +313,7 @@ export default function JobsPage() {
               </div>
               {filteredJobs.map((job) => (
                 <Card key={job._id} className="hover:shadow-lg transition-shadow cursor-pointer group">
-                  <div 
+                  <div
                     onClick={() => router.push(`/jobs/${job._id}`)}
                     className="block group-hover:scale-[1.02] transition-transform duration-200"
                   >
@@ -274,10 +322,10 @@ export default function JobsPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <Badge className={getTypeColor(job.details?.job?.type || 'full-time')}>
-                              {job.details?.job?.type ? 
-                                job.details.job.type.split('-').map((word: string) => 
+                              {job.details?.job?.type ?
+                                job.details.job.type.split('-').map((word: string) =>
                                   word.charAt(0).toUpperCase() + word.slice(1)
-                                ).join('-') : 
+                                ).join('-') :
                                 'Full-time'
                               }
                             </Badge>
@@ -289,7 +337,7 @@ export default function JobsPage() {
                               </span>
                             )}
                           </div>
-                          
+
                           <h3 className="text-xl font-semibold text-gray-900 mb-2">{job.title}</h3>
                           <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                             {job.details?.job?.company && (
@@ -309,9 +357,9 @@ export default function JobsPage() {
                               {formatDate(job.createdAt)}
                             </div>
                           </div>
-                          
+
                           <p className="text-gray-700 mb-3">{job.description}</p>
-                          
+
                           {job.details?.job?.requirements && job.details.job.requirements.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {job.details.job.requirements.map((req: string, index: number) => (
@@ -325,11 +373,11 @@ export default function JobsPage() {
                       </div>
                     </CardContent>
                   </div>
-                  
+
                   {/* Contact Button - Outside clickable area */}
                   <div className="px-6 pb-4 flex gap-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       className="flex-1"
                       onClick={(e) => {
@@ -339,8 +387,8 @@ export default function JobsPage() {
                     >
                       View Details
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="flex-1 bg-orange-500 hover:bg-orange-600"
                       onClick={(e) => {
                         e.stopPropagation();

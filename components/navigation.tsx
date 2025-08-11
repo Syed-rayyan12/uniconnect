@@ -144,22 +144,34 @@ export default function Navigation() {
         {isOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
-              <Link href="/posts" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
+              <Link 
+                onClick={() => setIsOpen(false)}
+              href="/posts" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
                 Posts
               </Link>
-              <Link href="/jobs" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
+              <Link 
+                onClick={() => setIsOpen(false)}
+              href="/jobs" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
                 Jobs
               </Link>
-              <Link href="/ridesharing" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
+              <Link 
+                onClick={() => setIsOpen(false)}
+              href="/ridesharing" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
                 Rides
               </Link>
-              <Link href="/accommodation" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
+              <Link 
+                onClick={() => setIsOpen(false)}
+              href="/accommodation" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
                 Accommodation
               </Link>
-              <Link href="/marketplace" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
+              <Link 
+                onClick={() => setIsOpen(false)}
+              href="/marketplace" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
                 Marketplace
               </Link>
-              <Link href="/messages" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
+              <Link 
+                onClick={() => setIsOpen(false)}
+              href="/messages" className="block px-3 py-2 text-gray-700 hover:text-orange-600 font-medium">
                 Messages
               </Link>
               

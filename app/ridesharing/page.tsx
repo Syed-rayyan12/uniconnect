@@ -13,7 +13,12 @@ import {
   Clock, 
   Users, 
   MessageCircle, 
-  Plus
+  Plus,
+  Briefcase,
+  DollarSign,
+  Home,
+  ShoppingBag,
+  TrendingUp
 } from 'lucide-react';
 import { usePostsByCategory, usePosts } from '@/contexts/PostsContext';
 import { ApiClient } from '@/lib/api';
@@ -48,10 +53,22 @@ export default function RidesharingPage() {
   // Use PostsContext for ridesharing posts
   const { posts: ridesharingPosts, loading, error } = usePostsByCategory('ridesharing');
   const { updatePost } = usePosts();
-  
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showMessagingModal, setShowMessagingModal] = useState(false);
+
+
+  //Ordered Tabs
+  const categories = [
+    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
+    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
+    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
+    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
+    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
+    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
+  ]
 
   // Transform posts into rides format
   const rides = useMemo(() => {
@@ -92,6 +109,14 @@ export default function RidesharingPage() {
       setShowBookingModal(true);
     }
   };
+
+  const handleCategoryChange = (categoryId: string) => {
+    // Only make changes if category is actually different
+    if (selectedCategory === categoryId) return
+    
+    setSelectedCategory(categoryId)
+    setSelectedCity('all') // Reset city filter when changing category
+  }
 
   const handleMessage = (rideId: string, driverName: string) => {
     const token = localStorage.getItem('token');
@@ -193,28 +218,30 @@ export default function RidesharingPage() {
     <div className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex max-sm:flex-col max-sm:items-start items-center justify-between mb-8">
           <div className="flex items-center">
             <Link href="/" className="mr-4">
               <ArrowLeft className="h-6 w-6 text-gray-600 hover:text-orange-600" />
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Pick & Drop</h1>
-              <div className="flex items-center space-x-2 text-gray-600">
+              <div className="flex items-center max-sm:items-start space-x-2 text-gray-600">
                 <p>Find or offer rides across UK universities</p>
                 {locationData.hasLocation && (
                   <>
-                    <span>•</span>
+                    {/* <span>•</span> */}
+                   
                     <div className="flex items-center space-x-1">
                       <MapPin className="h-4 w-4 text-green-600" />
                       <span className="text-sm text-green-600">Showing nearby rides ({locationData.radius || 20}km radius)</span>
                     </div>
+                  
                   </>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 max-sm:mt-6">
             <Link href="/ridesharing/offer">
               <Button className="bg-orange-500 hover:bg-orange-600 flex items-center gap-2">
                 <Plus className="h-4 w-4" />
@@ -223,6 +250,30 @@ export default function RidesharingPage() {
             </Link>
           </div>
         </div>
+
+        <div className=" pb-6">
+                <div className="flex flex-wrap gap-3">
+                  {categories.map((category) => {
+                    const IconComponent = category.icon
+                    const isActive = selectedCategory === category.id
+                    
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => handleCategoryChange(category.id)}
+                        className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${
+                          isActive
+                            ? 'bg-orange-500 text-white shadow-lg scale-105'
+                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                        }`}
+                      >
+                        <IconComponent className="h-5 w-5" />
+                        <span className="text-sm font-medium">{category.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
         {/* Rides List */}
         <div className="space-y-4">

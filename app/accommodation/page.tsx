@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Home, 
-  MapPin, 
-  Calendar, 
-  Users, 
+import {
+  Home,
+  MapPin,
+  Calendar,
+  Users,
   DollarSign,
   Search,
   Filter,
@@ -22,7 +22,10 @@ import {
   Bed,
   Bath,
   Wifi,
-  Car
+  Car,
+  Briefcase,
+  ShoppingBag,
+  TrendingUp
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import LocationFilter from '@/components/location-filter';
@@ -35,11 +38,12 @@ export default function AccommodationPage() {
   const locationData = useLocationData();
   const { updateRadius } = useLocation();
   const router = useRouter();
-  
+
   // Use PostsContext for accommodation posts
   const { posts: accommodationPosts, loading, error } = usePostsByCategory('accommodation');
   const { updatePost } = usePosts();
-  
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
   const [searchTerm, setSearchTerm] = useState('');
   const [locationInfo, setLocationInfo] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -50,6 +54,16 @@ export default function AccommodationPage() {
     accommodationType: 'all',
     location: 'all'
   });
+
+  const categories = [
+    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
+    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
+    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
+    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
+    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
+    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
+  ]
+
 
   // Transform posts into accommodation format
   const posts = useMemo(() => {
@@ -105,10 +119,18 @@ export default function AccommodationPage() {
       window.location.href = '/auth';
       return;
     }
-    
+
     setSelectedPost(post);
     setShowMessagingModal(true);
   };
+
+  const handleCategoryChange = (categoryId: string) => {
+    // Only make changes if category is actually different
+    if (selectedCategory === categoryId) return
+
+    setSelectedCategory(categoryId)
+    setSelectedCity('all') // Reset city filter when changing category
+  }
 
   if (loading) {
     return (
@@ -133,7 +155,7 @@ export default function AccommodationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
@@ -149,6 +171,29 @@ export default function AccommodationPage() {
               List Your Property
             </Button>
           </Link>
+        </div>
+
+        <div className="pb-6">
+          <div className="flex flex-wrap gap-3 ">
+            {categories.map((category) => {
+              const IconComponent = category.icon
+              const isActive = selectedCategory === category.id
+
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${isActive
+                      ? 'bg-orange-500 text-white shadow-lg scale-105'
+                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                >
+                  <IconComponent className="h-5 w-5" />
+                  <span className="text-sm font-medium">{category.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -184,11 +229,11 @@ export default function AccommodationPage() {
                       Search
                     </Button>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-4">
                     <select
                       value={filters.priceRange}
-                      onChange={(e) => setFilters({...filters, priceRange: e.target.value})}
+                      onChange={(e) => setFilters({ ...filters, priceRange: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                     >
                       <option value="all">All Prices</option>
@@ -197,10 +242,10 @@ export default function AccommodationPage() {
                       <option value="500-800">£500 - £800/month</option>
                       <option value="800+">£800+/month</option>
                     </select>
-                    
+
                     <select
                       value={filters.accommodationType}
-                      onChange={(e) => setFilters({...filters, accommodationType: e.target.value})}
+                      onChange={(e) => setFilters({ ...filters, accommodationType: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                     >
                       <option value="all">All Types</option>
@@ -224,12 +269,12 @@ export default function AccommodationPage() {
               {locationInfo && locationInfo.searchArea && (
                 <span className="text-sm text-gray-500 ml-2">
                   {locationInfo.searchArea.foundCity && ` in ${locationInfo.searchArea.foundCity}`}
-                  {locationInfo.searchArea.nearbyCities && locationInfo.searchArea.nearbyCities.length > 0 && 
+                  {locationInfo.searchArea.nearbyCities && locationInfo.searchArea.nearbyCities.length > 0 &&
                     ` and nearby areas`}
                 </span>
               )}
             </p>
-            
+
             {/* Location Quality Indicator */}
             {locationInfo && locationInfo.fallbacksUsed && locationInfo.fallbacksUsed.length > 0 && (
               <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
@@ -239,7 +284,7 @@ export default function AccommodationPage() {
               </div>
             )}
           </div>
-          
+
           {/* Distance info for posts */}
           {posts.length > 0 && locationInfo?.userLocation && (
             <p className="text-xs text-gray-500 mt-1">
@@ -253,7 +298,7 @@ export default function AccommodationPage() {
             <CardContent>
               <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No accommodations found</h3>
-              
+
               {/* Show smart suggestions from backend */}
               {suggestions.length > 0 ? (
                 <div className="mb-6">
@@ -283,7 +328,7 @@ export default function AccommodationPage() {
               ) : (
                 <p className="text-gray-500 mb-4">Be the first to list your property!</p>
               )}
-              
+
               <Link href="/accommodation/list">
                 <Button className="bg-orange-600 hover:bg-orange-700">
                   <Plus className="h-4 w-4 mr-2" />
@@ -296,7 +341,7 @@ export default function AccommodationPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post: any) => (
               <Card key={post._id} className="overflow-hidden hover:shadow-xl transition-all duration-200 cursor-pointer group">
-                <div 
+                <div
                   onClick={() => router.push(`/accommodation/${post._id}`)}
                   className="block group-hover:scale-[1.02] transition-transform duration-200"
                 >
@@ -313,9 +358,9 @@ export default function AccommodationPage() {
                       </div>
                     )}
                     <div className="absolute top-2 right-2 flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="secondary" 
+                      <Button
+                        size="sm"
+                        variant="secondary"
                         className="bg-white/80"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -324,9 +369,9 @@ export default function AccommodationPage() {
                       >
                         <Heart className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="secondary" 
+                      <Button
+                        size="sm"
+                        variant="secondary"
                         className="bg-white/80"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -337,7 +382,7 @@ export default function AccommodationPage() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-lg line-clamp-2">{post.title}</h3>
@@ -348,7 +393,7 @@ export default function AccommodationPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center text-gray-600 text-sm mb-2">
                       <MapPin className="h-4 w-4 mr-1" />
                       <span>{post.location?.city}, {post.location?.state}</span>
@@ -361,9 +406,9 @@ export default function AccommodationPage() {
                         </span>
                       )}
                     </div>
-                    
+
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">{post.description}</p>
-                    
+
                     {post.details?.accommodation && (
                       <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                         {post.details.accommodation.bedrooms && (
@@ -386,7 +431,7 @@ export default function AccommodationPage() {
                         )}
                       </div>
                     )}
-                    
+
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-bold text-lg text-orange-600">
@@ -399,17 +444,17 @@ export default function AccommodationPage() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="text-xs text-gray-500 mt-2">
                       Posted {formatDate(post.createdAt)}
                     </div>
                   </CardContent>
                 </div>
-                
+
                 {/* Contact Button - Outside clickable area */}
                 <div className="px-4 pb-4 flex gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     className="flex-1"
                     onClick={(e) => {
@@ -419,8 +464,8 @@ export default function AccommodationPage() {
                   >
                     View Details
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="flex-1 bg-orange-600 hover:bg-orange-700"
                     onClick={(e) => {
                       e.stopPropagation();
