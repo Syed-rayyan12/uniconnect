@@ -691,7 +691,7 @@ export default function HomePage() {
             </div>
 
             <p className="text-sm text-gray-500 mt-8">
-              🚀 Expected launch: <span className="font-semibold text-orange-600">Early 2025</span>
+              🚀 Expected launch: <span className="font-semibold text-orange-600">Early 2026</span>
             </p>
           </div>
         </div>
