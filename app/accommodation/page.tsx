@@ -31,7 +31,7 @@ import { apiClient } from '@/lib/api';
 import LocationFilter from '@/components/location-filter';
 import MessagingModal from '@/components/messaging-modal';
 import { useLocationData, useLocation } from '@/contexts/LocationContext';
-import { usePostsByCategory, usePosts } from '@/contexts/PostsContext';
+import { usePostsByCategory, usePosts, usePostsWithFilters } from '@/contexts/PostsContext';
 
 export default function AccommodationPage() {
   // Global location state
@@ -40,33 +40,36 @@ export default function AccommodationPage() {
   const router = useRouter();
 
   // Use PostsContext for accommodation posts
-  const { posts: accommodationPosts, loading, error } = usePostsByCategory('accommodation');
+  const { posts: accommodationPosts, loading: accomdationLoading, error: accomdationError } = usePostsByCategory('accommodation');
   const { updatePost } = usePosts();
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedCity, setSelectedCity] = useState('all')
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [locationInfo, setLocationInfo] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [showMessagingModal, setShowMessagingModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
   const [filters, setFilters] = useState({
     priceRange: 'all',
     accommodationType: 'all',
     location: 'all'
   });
 
-  const categories = [
-    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
-    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
-    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
-    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
-    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
-    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
-  ]
+  const { allPosts } = usePosts()
 
+  // Use the new Posts context with filters
+  const { posts, loading, error } = usePostsWithFilters({
+    category: selectedCategory === 'all' ? undefined : selectedCategory,
+    search: searchQuery.trim() || undefined,
+    city: selectedCity === 'all' ? undefined : selectedCity
+  })
+
+  const availableCities = Array.from(new Set(allPosts.map(post => post.location.city))).sort()
+  const nearbyPostsCount = posts.length
 
   // Transform posts into accommodation format
-  const posts = useMemo(() => {
+  const transformedPosts = useMemo(() => {
     return accommodationPosts.map(post => ({
       _id: post._id,
       title: post.title,
@@ -124,15 +127,7 @@ export default function AccommodationPage() {
     setShowMessagingModal(true);
   };
 
-  const handleCategoryChange = (categoryId: string) => {
-    // Only make changes if category is actually different
-    if (selectedCategory === categoryId) return
-
-    setSelectedCategory(categoryId)
-    setSelectedCity('all') // Reset city filter when changing category
-  }
-
-  if (loading) {
+  if (accomdationLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -149,6 +144,14 @@ export default function AccommodationPage() {
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Loading accommodation...</div>
       </div>
     );
   }
@@ -173,32 +176,10 @@ export default function AccommodationPage() {
           </Link>
         </div>
 
-        <div className="pb-6">
-          <div className="flex flex-wrap gap-3 ">
-            {categories.map((category) => {
-              const IconComponent = category.icon
-              const isActive = selectedCategory === category.id
-
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${isActive
-                      ? 'bg-orange-500 text-white shadow-lg scale-105'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                    }`}
-                >
-                  <IconComponent className="h-5 w-5" />
-                  <span className="text-sm font-medium">{category.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
 
         {/* Search and Filters */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-          {/* Location Filter */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+         
           <div className="lg:col-span-1">
             <LocationFilter
               onFilterChange={handleLocationFilterChange}
@@ -207,7 +188,7 @@ export default function AccommodationPage() {
             />
           </div>
 
-          {/* Search and Other Filters */}
+         
           <div className="lg:col-span-3">
             <Card>
               <CardContent className="p-6">
@@ -259,13 +240,13 @@ export default function AccommodationPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </div> */}
 
         {/* Results */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <p className="text-gray-600">
-              {posts.length} accommodation{posts.length !== 1 ? 's' : ''} available
+              {transformedPosts.length} accommodation{transformedPosts.length !== 1 ? 's' : ''} available
               {locationInfo && locationInfo.searchArea && (
                 <span className="text-sm text-gray-500 ml-2">
                   {locationInfo.searchArea.foundCity && ` in ${locationInfo.searchArea.foundCity}`}
@@ -286,11 +267,57 @@ export default function AccommodationPage() {
           </div>
 
           {/* Distance info for posts */}
-          {posts.length > 0 && locationInfo?.userLocation && (
+          {transformedPosts.length > 0 && locationInfo?.userLocation && (
             <p className="text-xs text-gray-500 mt-1">
               Sorted by distance from your location
             </p>
           )}
+        </div>
+
+        <div>
+          <Card className="mt-6">
+            <CardContent className="p-2">
+              {availableCities.length > 0 && (
+                <div className="px-8 pb-8  border-gray-100">
+                  <div className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        {nearbyPostsCount > 0 ? "Or Browse by City" : "Browse by City"}
+                      </h4>
+                      {nearbyPostsCount > 0 && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                          {nearbyPostsCount} nearby
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <button
+                        onClick={() => setSelectedCity("all")}
+                        className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === "all"
+                          ? "bg-blue-500 text-white shadow-md"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                      >
+                        All Cities
+                      </button>
+                      {availableCities.map((city) => (
+                        <button
+                          key={city}
+                          onClick={() => setSelectedCity(city)}
+                          className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === city
+                            ? "bg-blue-500 text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {posts.length === 0 ? (
@@ -330,7 +357,7 @@ export default function AccommodationPage() {
               )}
 
               <Link href="/accommodation/list">
-                <Button className="bg-orange-600 hover:bg-orange-700">
+                <Button className="bg-orange-500 hover:bg-orange-600">
                   <Plus className="h-4 w-4 mr-2" />
                   List Your Property
                 </Button>
@@ -338,7 +365,7 @@ export default function AccommodationPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {posts.map((post: any) => (
               <Card key={post._id} className="overflow-hidden hover:shadow-xl transition-all duration-200 cursor-pointer group">
                 <div

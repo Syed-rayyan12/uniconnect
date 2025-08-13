@@ -53,6 +53,7 @@ export default function Navigation() {
               width={32}
               height={32}
               className="rounded-lg"
+              onClick={() => setIsOpen(false)}
             />
             <span className="text-xl font-bold text-gray-900 transition-colors duration-200">SayDone</span>
           </Link>

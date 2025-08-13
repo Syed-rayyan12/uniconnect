@@ -130,7 +130,11 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white transition-colors duration-300">
       {/* Hero Section */}
-      <section id="hero" className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50 overflow-hidden pt-16 transition-colors duration-300">
+      <section 
+      id="hero" className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50 overflow-hidden pt-16 transition-colors duration-300"
+      
+      >
+      
         <div className="absolute inset-0 bg-gradient-to-r from-orange-100/20 to-transparent transition-colors duration-300"></div>
         
         {/* Dynamic Light Rays Background */}
@@ -211,8 +215,7 @@ export default function HomePage() {
 
           {/* Location & Search Container */}
           <div className="max-w-5xl mx-auto mb-16">
-            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-              
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"> 
               {/* Location Display Section */}
               <div className="p-6 bg-gradient-to-r from-orange-50 to-white border-b border-gray-100">
                 <div className="flex items-center justify-center">

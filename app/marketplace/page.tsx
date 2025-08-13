@@ -8,23 +8,37 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import LocationFilter from "@/components/location-filter";
 import { useLocationData, useLocation } from '@/contexts/LocationContext';
-import { usePostsByCategory, usePosts } from '@/contexts/PostsContext';
+import { usePostsByCategory, usePosts, usePostsWithFilters } from '@/contexts/PostsContext';
 
 export default function MarketplacePage() {
   // Global location state
   const locationData = useLocationData();
   const { updateRadius } = useLocation();
-  
+
   // Use PostsContext for marketplace posts
   const { posts: marketplacePosts, loading, error } = usePostsByCategory('buy-sell');
   const { updatePost } = usePosts();
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedCity, setSelectedCity] = useState('all')
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [conditionFilter, setConditionFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
+
+
+  const { allPosts } = usePosts()
+
+  // Use the new Posts context with filters
+  const { posts, loading: marketplaceLoading, error: marketplaceError } = usePostsWithFilters({
+    category: selectedCategory === 'all' ? undefined : selectedCategory,
+    search: searchQuery.trim() || undefined,
+    city: selectedCity === 'all' ? undefined : selectedCity
+  })
+
+  const availableCities = Array.from(new Set(allPosts.map(post => post.location.city))).sort()
+  const nearbyPostsCount = posts.length
+
 
   // Transform posts into products format
   const products = useMemo(() => {
@@ -49,21 +63,15 @@ export default function MarketplacePage() {
   }, [marketplacePosts]);
 
 
-  const handleCategoryChange = (categoryId: string) => {
-    // Only make changes if category is actually different
-    if (selectedCategory === categoryId) return
 
-    setSelectedCategory(categoryId)
-    setSelectedCity('all') // Reset city filter when changing category
-  }
 
   const handleLocationFilterChange = useCallback((data: any) => {
     // Only update radius if it has changed
     if (data.radius !== locationData.radius) {
       updateRadius(data.radius);
     }
-    
-    
+
+
     // In a real app, you would filter products based on location here
     if (data?.location) {
       setLocationFilter(data.location);
@@ -71,28 +79,20 @@ export default function MarketplacePage() {
   }, [locationData.radius, updateRadius]);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLocation = !locationFilter || 
+
+    const matchesLocation = !locationFilter ||
       product.location.toLowerCase().includes(locationFilter.toLowerCase());
-    
+
     const matchesCategory = !categoryFilter || product.category === categoryFilter;
     const matchesCondition = !conditionFilter || product.condition === conditionFilter;
-    
+
     return matchesSearch && matchesLocation && matchesCategory && matchesCondition;
   });
 
 
-  const TabsCategories = [
-    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
-    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
-    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
-    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
-    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
-    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
-  ]
 
   const categories = [
     { value: '', label: 'All Categories' },
@@ -126,6 +126,16 @@ export default function MarketplacePage() {
       <div className="min-h-screen bg-gray-50 pt-16">
         <div className="flex justify-center items-center h-64">
           <div className="text-lg">Loading marketplace...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (marketplaceLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Loading marketplace post...</div>
         </div>
       </div>
     );
@@ -165,34 +175,11 @@ export default function MarketplacePage() {
             </Button>
           </div>
         </div>
-     
-        {/* Ordered Tabs */}
-        <div className=" pb-6">
-          <div className="flex flex-wrap gap-3 ">
-            {TabsCategories.map((category) => {
-              const IconComponent = category.icon
-              const isActive = selectedCategory === category.id
 
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${isActive
-                      ? 'bg-orange-500 text-white shadow-lg scale-105'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                    }`}
-                >
-                  <IconComponent className="h-5 w-5" />
-                  <span className="text-sm font-medium">{category.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
 
         {/* Search and Filters */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          {/* Location Filter */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        
           <div className="lg:col-span-1">
             <LocationFilter
               onFilterChange={handleLocationFilterChange}
@@ -201,7 +188,7 @@ export default function MarketplacePage() {
             />
           </div>
 
-          {/* Search and Other Filters */}
+         
           <div className="lg:col-span-3">
             <Card>
               <CardContent className="p-4">
@@ -240,6 +227,52 @@ export default function MarketplacePage() {
               </CardContent>
             </Card>
           </div>
+        </div> */}
+
+        <div className="mb-6">
+          <Card className="mt-6">
+            <CardContent className="p-2">
+              {availableCities.length > 0 && (
+                <div className="px-8 pb-8  border-gray-100">
+                  <div className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        {nearbyPostsCount > 0 ? "Or Browse by City" : "Browse by City"}
+                      </h4>
+                      {nearbyPostsCount > 0 && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                          {nearbyPostsCount} nearby
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <button
+                        onClick={() => setSelectedCity("all")}
+                        className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === "all"
+                          ? "bg-blue-500 text-white shadow-md"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                      >
+                        All Cities
+                      </button>
+                      {availableCities.map((city) => (
+                        <button
+                          key={city}
+                          onClick={() => setSelectedCity(city)}
+                          className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === city
+                            ? "bg-blue-500 text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Results */}
@@ -262,7 +295,7 @@ export default function MarketplacePage() {
               <div className="text-sm text-gray-600 mb-4">
                 Showing {filteredProducts.length} item{filteredProducts.length !== 1 ? 's' : ''}
               </div>
-              
+
               {viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProducts.map((product) => (
@@ -288,7 +321,7 @@ export default function MarketplacePage() {
                             </button>
                           </div>
                         </div>
-                        
+
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-2">
                             <Badge className={getConditionColor(product.condition)}>
@@ -299,16 +332,16 @@ export default function MarketplacePage() {
                               {product.views}
                             </div>
                           </div>
-                          
+
                           <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{product.title}</h3>
-                          
+
                           <div className="flex items-center gap-2 mb-3">
                             <span className="text-xl font-bold text-orange-600">{product.price}</span>
                             {product.originalPrice && (
                               <span className="text-sm text-gray-500 line-through">{product.originalPrice}</span>
                             )}
                           </div>
-                          
+
                           <div className="flex items-center justify-between text-sm text-gray-600">
                             <div className="flex items-center">
                               <Star className="h-4 w-4 text-yellow-400 mr-1" />
@@ -319,7 +352,7 @@ export default function MarketplacePage() {
                               {product.location}
                             </div>
                           </div>
-                          
+
                           <div className="mt-3 pt-3 border-t">
                             <Button className="w-full bg-orange-500 hover:bg-orange-600">
                               Contact Seller
@@ -375,7 +408,7 @@ export default function MarketplacePage() {
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                               <div className="flex items-center">
                                 <Star className="h-4 w-4 text-yellow-400 mr-1" />
@@ -390,7 +423,7 @@ export default function MarketplacePage() {
                                 {product.posted}
                               </div>
                             </div>
-                            
+
                             <div className="flex gap-2">
                               <Button className="bg-orange-500 hover:bg-orange-600">
                                 Contact Seller

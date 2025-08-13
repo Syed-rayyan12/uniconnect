@@ -171,7 +171,9 @@ export default function MessagingModal({
               </div>
             ) : (
               messages.map((message, index) => {
-                const isCurrentUser = currentUser && message.sender?._id === currentUser._id;
+                const isCurrentUser =
+                currentUser &&
+                String(message.sender?._id) === String(currentUser._id);
                 const showDate = index === 0 || 
                   formatDate(messages[index - 1].createdAt) !== formatDate(message.createdAt);
 

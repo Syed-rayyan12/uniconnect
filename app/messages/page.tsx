@@ -196,7 +196,7 @@ export default function MessagesPage() {
                       </div>
                     </div>
                     
-                    <div className="flex-1 min-w-0">
+                    <div className="flex min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {conversation.otherUser.name}

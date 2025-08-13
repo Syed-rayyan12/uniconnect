@@ -20,7 +20,7 @@ import {
   ShoppingBag,
   TrendingUp
 } from 'lucide-react';
-import { usePostsByCategory, usePosts } from '@/contexts/PostsContext';
+import { usePostsByCategory, usePosts, usePostsWithFilters } from '@/contexts/PostsContext';
 import { ApiClient } from '@/lib/api';
 import BookingModal from '@/components/booking-modal';
 import MessagingModal from '@/components/messaging-modal';
@@ -51,13 +51,18 @@ export default function RidesharingPage() {
   const locationData = useLocationData();
   
   // Use PostsContext for ridesharing posts
-  const { posts: ridesharingPosts, loading, error } = usePostsByCategory('ridesharing');
+  const { posts: ridesharingPosts } = usePostsByCategory('ridesharing');
   const { updatePost } = usePosts();
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedCity, setSelectedCity] = useState('all')
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showMessagingModal, setShowMessagingModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
+  const { allPosts } = usePosts()
+
+  // Use the new Posts context with filters
+ 
 
 
   //Ordered Tabs
@@ -69,6 +74,15 @@ export default function RidesharingPage() {
     { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
     { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
   ]
+
+  const { posts, loading, error } = usePostsWithFilters({
+    category: selectedCategory === 'all' ? undefined : selectedCategory,
+    search: searchQuery.trim() || undefined,
+    city: selectedCity === 'all' ? undefined : selectedCity
+  })
+
+  const availableCities = Array.from(new Set(allPosts.map(post => post.location.city))).sort()
+  const nearbyPostsCount = posts.length
 
   // Transform posts into rides format
   const rides = useMemo(() => {
@@ -110,13 +124,7 @@ export default function RidesharingPage() {
     }
   };
 
-  const handleCategoryChange = (categoryId: string) => {
-    // Only make changes if category is actually different
-    if (selectedCategory === categoryId) return
-    
-    setSelectedCategory(categoryId)
-    setSelectedCity('all') // Reset city filter when changing category
-  }
+ 
 
   const handleMessage = (rideId: string, driverName: string) => {
     const token = localStorage.getItem('token');
@@ -251,32 +259,53 @@ export default function RidesharingPage() {
           </div>
         </div>
 
-        <div className=" pb-6">
-                <div className="flex flex-wrap gap-3">
-                  {categories.map((category) => {
-                    const IconComponent = category.icon
-                    const isActive = selectedCategory === category.id
-                    
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => handleCategoryChange(category.id)}
-                        className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${
-                          isActive
-                            ? 'bg-orange-500 text-white shadow-lg scale-105'
-                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                        }`}
-                      >
-                        <IconComponent className="h-5 w-5" />
-                        <span className="text-sm font-medium">{category.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+       
 
         {/* Rides List */}
         <div className="space-y-4">
+        <Card className="mt-6">
+            <CardContent className="p-2">
+              {availableCities.length > 0 && (
+                <div className="px-8 pb-8  border-gray-100">
+                  <div className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        {nearbyPostsCount > 0 ? "Or Browse by City" : "Browse by City"}
+                      </h4>
+                      {nearbyPostsCount > 0 && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                          {nearbyPostsCount} nearby
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <button
+                        onClick={() => setSelectedCity("all")}
+                        className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === "all"
+                            ? "bg-blue-500 text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                      >
+                        All Cities
+                      </button>
+                      {availableCities.map((city) => (
+                        <button
+                          key={city}
+                          onClick={() => setSelectedCity(city)}
+                          className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === city
+                              ? "bg-blue-500 text-white shadow-md"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {rides.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
@@ -388,3 +417,7 @@ export default function RidesharingPage() {
     </div>
   );
 }
+// function usePostsWithFilters(arg0: { category: any; search: any; city: any; }): { posts: any; loading: any; error: any; } {
+//   throw new Error('Function not implemented.');
+// }
+

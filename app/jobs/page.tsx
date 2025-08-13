@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Clock, Briefcase, Building, Users, BookOpen, Search, MessageCircle, Car, DollarSign, Home, ShoppingBag, TrendingUp } from "lucide-react";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import LocationFilter from "@/components/location-filter";
 import MessagingModal from '@/components/messaging-modal';
 import { useLocationData, useLocation } from '@/contexts/LocationContext';
-import { usePostsByCategory, usePosts } from '@/contexts/PostsContext';
+import { usePostsByCategory, usePosts, usePostsWithFilters } from '@/contexts/PostsContext';
 import { apiClient } from '@/lib/api';
 
 interface Job {
@@ -80,32 +79,27 @@ export default function JobsPage() {
   const router = useRouter();
 
   // Use PostsContext for jobs posts
-  const { posts: jobsPosts, loading, error } = usePostsByCategory('jobs');
+  const { posts: jobsPosts, loading: filtersLoading, error: filtersError } = usePostsByCategory('jobs');
   const { updatePost } = usePosts();
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedCity, setSelectedCity] = useState('all')
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showMessagingModal, setShowMessagingModal] = useState(false);
   const [locationInfo, setLocationInfo] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCity, setSelectedCity] = useState('all')
+  const { allPosts } = usePosts()
 
-  const categories = [
-    { id: 'all', label: 'All', icon: TrendingUp, color: 'bg-gray-500', hoverColor: 'hover:bg-gray-600' },
-    { id: 'pick-drop', label: 'Rides', icon: Car, color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600' },
-    { id: 'accommodation', label: 'Housing', icon: Home, color: 'bg-green-500', hoverColor: 'hover:bg-green-600' },
-    { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'bg-purple-500', hoverColor: 'hover:bg-purple-600' },
-    { id: 'buy-sell', label: 'Marketplace', icon: ShoppingBag, color: 'bg-pink-500', hoverColor: 'hover:bg-pink-600' },
-    { id: 'currency-exchange', label: 'Currency', icon: DollarSign, color: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600' },
-  ]
+  // Use the new Posts context with filters
+  const { posts, loading, error } = usePostsWithFilters({
+    category: selectedCategory === 'all' ? undefined : selectedCategory,
+    search: searchQuery.trim() || undefined,
+    city: selectedCity === 'all' ? undefined : selectedCity
+  })
 
-  const handleCategoryChange = (categoryId: string) => {
-    // Only make changes if category is actually different
-    if (selectedCategory === categoryId) return
-    setSelectedCategory(categoryId)
-    setSelectedCity('all') // Reset city filter when changing category
-  }
+  const availableCities = Array.from(new Set(allPosts.map(post => post.location.city))).sort()
+  const nearbyPostsCount = posts.length
 
   // Transform posts into jobs format
   const jobs = useMemo(() => {
@@ -135,7 +129,6 @@ export default function JobsPage() {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -182,12 +175,19 @@ export default function JobsPage() {
     return colors[type?.toLowerCase() as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
+  if (filtersLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Loading jobs...</div>
+      </div>
+    );
+  }
+
+  
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-16">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Loading jobs...</div>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Loading jobs...</div>
       </div>
     );
   }
@@ -202,15 +202,11 @@ export default function JobsPage() {
               <ArrowLeft className="h-6 w-6 text-gray-600 hover:text-orange-600" />
             </Link>
             <div>
-
               <h1 className="text-3xl  font-bold text-gray-900 flex items-center">
                 <Briefcase className="h-8 w-8 text-orange-500 mr-3 " />
                 Jobs & Internships
-
               </h1>
-
               <p className="text-gray-600 max-sm:pr-12">Find student-friendly job opportunities across the UK</p>
-
             </div>
           </div>
           <div className="flex justify-start items-start max-sm:flex-none">
@@ -223,76 +219,53 @@ export default function JobsPage() {
           </div>
         </div>
 
-        <div className=" pb-6">
-          <div className="flex flex-wrap gap-3 ">
-            {categories.map((category) => {
-              const IconComponent = category.icon
-              const isActive = selectedCategory === category.id
 
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-full font-semibold transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${isActive
-                    ? 'bg-orange-500 text-white shadow-lg scale-105'
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                    }`}
-                >
-                  <IconComponent className="h-5 w-5" />
-                  <span className="text-sm font-medium">{category.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-
-
-          {/* Location Filter */}
-          <div className="lg:col-span-1">
-            <LocationFilter
-              onFilterChange={handleLocationFilterChange}
-              defaultRadius={locationData.radius || 20}
-              compact={true}
-            />
-          </div>
-
-          {/* Search and Type Filters */}
-          <div className="lg:col-span-3">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                      <input
-                        type="text"
-                        placeholder="Search jobs, companies, or skills..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  >
-                    {jobTypes.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
 
         {/* Results */}
         <div className="space-y-4">
+          <Card className="mt-4">
+            <CardContent className="p-2">
+              {availableCities.length > 0 && (
+                <div className="px-8 pb-8 border-t border-gray-100">
+                  <div className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        {nearbyPostsCount > 0 ? "Or Browse by City" : "Browse by City"}
+                      </h4>
+                      {nearbyPostsCount > 0 && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                          {nearbyPostsCount} nearby
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <button
+                        onClick={() => setSelectedCity("all")}
+                        className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === "all"
+                            ? "bg-blue-500 text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                      >
+                        All Cities
+                      </button>
+                      {availableCities.map((city) => (
+                        <button
+                          key={city}
+                          onClick={() => setSelectedCity(city)}
+                          className={`px-4 py-2 text-sm rounded-full font-medium transition-all duration-200 ${selectedCity === city
+                              ? "bg-blue-500 text-white shadow-md"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {filteredJobs.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
@@ -304,7 +277,9 @@ export default function JobsPage() {
                     Back to Home
                   </Button>
                 </Link>
+
               </CardContent>
+
             </Card>
           ) : (
             <>
@@ -312,6 +287,7 @@ export default function JobsPage() {
                 Showing {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
               </div>
               {filteredJobs.map((job) => (
+
                 <Card key={job._id} className="hover:shadow-lg transition-shadow cursor-pointer group">
                   <div
                     onClick={() => router.push(`/jobs/${job._id}`)}
@@ -404,10 +380,12 @@ export default function JobsPage() {
               ))}
             </>
           )}
+
+
         </div>
       </div>
 
-      {/* Messaging Modal */}
+      {/* ===================== MESSAGE MODAL ===================== */}
       {showMessagingModal && selectedJob && (
         <MessagingModal
           isOpen={showMessagingModal}
@@ -415,12 +393,13 @@ export default function JobsPage() {
             setShowMessagingModal(false);
             setSelectedJob(null);
           }}
-          recipientId={selectedJob.author?._id}
-          recipientName={selectedJob.author?.name || 'Job Poster'}
-          rideTitle={selectedJob.title}
-          rideId={selectedJob._id}
+          recipientId={selectedJob?.author?._id}
+          recipientName={selectedJob?.author?.name || 'Job Poster'}
+          rideTitle={selectedJob?.title}
+          rideId={selectedJob ? selectedJob._id : undefined}
         />
       )}
+      {/* ================== END MESSAGE MODAL ==================== */}
     </div>
   );
 }
